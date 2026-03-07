@@ -12,7 +12,7 @@ Set Padding 10
 # Show help
 Type "dfx --help"
 Enter
-Sleep 1s
+Sleep 3s
 
 # Clear screen
 Hide
@@ -24,7 +24,7 @@ Show
 # Convert to PDF
 Type "dfx -i demo/demo.md -o demo/demo.pdf --pdf"
 Enter
-Sleep 2s
+Sleep 4s
 
 # Clear screen
 Hide
@@ -36,4 +36,4 @@ Show
 # Convert to DOCX
 Type "dfx -i demo/demo.md -o demo/demo.docx --docx"
 Enter
-Sleep 2s
+Sleep 4s
