@@ -1,9 +1,5 @@
 # Docflux CLI 🤖
 
-> **⚠️ ARCHIVED & RENAMED**: This project has been renamed to **Docflux** (`dfx`).
-> Please use the new repository: [github.com/fabricesemti80/docflux](https://github.com/fabricesemti80/docflux)
-> This repository is archived and no longer maintained.
-
 <p align="center">
   <img src="demo.gif" alt="Docflux Demo" width="600">
   <br>
