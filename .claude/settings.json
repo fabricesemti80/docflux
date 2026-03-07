@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add -A)",
+      "Bash(git restore --staged .claude/settings.json)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Read(//Users/fs/Documents/python/**)",
+      "Bash(mv markdowny docflux)"
+    ],
+    "additionalDirectories": [
+      "/Users/fs/Documents/python/markdowny/.git"
+    ]
+  }
+}

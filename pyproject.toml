@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md-converter"
+version = "1.0.0"
+description = "Markdown, DOCX, and PDF converter"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pypandoc",
+    "requests",
+    "pillow",
+    "xhtml2pdf",
+]
+
+[project.optional-dependencies]
+pdf-fallback = [
+    "xhtml2pdf",
+]
+lint = [
+    "ruff",
+]
+
+[project.scripts]
+dfx = "convert:main"
+
+[tool.setuptools]
+py-modules = ["convert"]

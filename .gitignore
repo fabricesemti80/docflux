@@ -1,0 +1,31 @@
+# Virtual environments
+venv/
+.venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Articles and drafts
+articles/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local curiosity notebook
+notebooks/curiosity_md_to_docx_pdf.ipynb
