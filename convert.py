@@ -76,7 +76,7 @@ def log_info(message):
     if not USE_COLOR:
         print(message)
     else:
-        print(f"{_paint('[INFO]', _Style.CYAN, _Style.BOLD)} {message}")
+        print(f"{_paint('[INFO]', _Style.GREEN, _Style.BOLD)} {message}")
 
 
 def log_warn(message):
