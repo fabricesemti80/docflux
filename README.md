@@ -1,11 +1,11 @@
-# Markdowny CLI 🤖
+# Docflux CLI 🤖
 
 > **⚠️ ARCHIVED & RENAMED**: This project has been renamed to **Docflux** (`dfx`).
 > Please use the new repository: [github.com/fabricesemti80/docflux](https://github.com/fabricesemti80/docflux)
 > This repository is archived and no longer maintained.
 
 <p align="center">
-  <img src="demo.gif" alt="Markdowny Demo" width="600">
+  <img src="demo.gif" alt="Docflux Demo" width="600">
   <br>
   <em>Demo: Converting Markdown to PDF / DOCX with Mermaid diagrams</em>
 </p>
@@ -39,13 +39,13 @@ Docflux (`dfx`) is a CLI for converting technical documentation between Markdown
 ### Linux / macOS
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/fabricesemti80/markdowny/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/fabricesemti80/docflux/main/install.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/fabricesemti80/markdowny/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/fabricesemti80/docflux/main/install.ps1 | iex
 ```
 
 ## Local Install (From Repo) 📦
@@ -119,13 +119,13 @@ Behavior notes:
 ### Linux / macOS
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/fabricesemti80/markdowny/main/uninstall.sh | bash
+curl -sSL https://raw.githubusercontent.com/fabricesemti80/docflux/main/uninstall.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/fabricesemti80/markdowny/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/fabricesemti80/docflux/main/uninstall.ps1 | iex
 ```
 
 ## Development Notes 🧪

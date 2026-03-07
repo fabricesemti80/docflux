@@ -6,10 +6,10 @@
       "Bash(git commit:*)",
       "Bash(git push origin main)",
       "Read(//Users/fs/Documents/python/**)",
-      "Bash(mv markdowny docflux)"
+      "Bash(mv docflux docflux)"
     ],
     "additionalDirectories": [
-      "/Users/fs/Documents/python/markdowny/.git"
+      "/Users/fs/Documents/python/docflux/.git"
     ]
   }
 }
