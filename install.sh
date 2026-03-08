@@ -29,8 +29,6 @@ if command -v apt-get &> /dev/null; then
 elif command -v brew &> /dev/null; then
     echo "Installing cairo and pkg-config via Homebrew..."
     brew install cairo pkg-config
-    export PKG_CONFIG="$(brew --prefix)/bin/pkg-config"
-    export PKG_CONFIG_PATH="$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig"
 fi
 
 if [[ -z "${BASH_SOURCE[0]}" || "${BASH_SOURCE[0]}" == "bash" ]]; then
@@ -48,6 +46,12 @@ echo "Installing Python 3.12 (required for PDF support)..."
 uv python install 3.12
 
 echo "Installing docflux with PDF support..."
-uv tool install --native-tls --python 3.12 .
+if command -v brew &> /dev/null; then
+    PKG_CONFIG="$(brew --prefix)/bin/pkg-config" \
+    PKG_CONFIG_PATH="$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" \
+    uv tool install --native-tls --python 3.12 .
+else
+    uv tool install --native-tls --python 3.12 .
+fi
 
 echo "Done! You can now run: dfx <input.md> [output]"
