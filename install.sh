@@ -26,6 +26,11 @@ fi
 echo "Installing system dependencies for PDF..."
 if command -v apt-get &> /dev/null; then
     sudo apt-get install -y libcairo2-dev pkg-config
+elif command -v brew &> /dev/null; then
+    echo "Installing cairo and pkg-config via Homebrew..."
+    brew install cairo pkg-config
+    export PKG_CONFIG="$(brew --prefix)/bin/pkg-config"
+    export PKG_CONFIG_PATH="$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig"
 fi
 
 if [[ -z "${BASH_SOURCE[0]}" || "${BASH_SOURCE[0]}" == "bash" ]]; then
