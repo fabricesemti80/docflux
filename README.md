@@ -23,6 +23,9 @@ Docflux (`dfx`) is a CLI for converting technical documentation between Markdown
 - `uv` package manager
 - Pandoc
   - If Pandoc is not in `PATH`, `dfx` attempts to download it automatically via `pypandoc`.
+- **macOS**: Homebrew is required for PDF support dependencies (cairo, pkg-config)
+  - The install script will install Homebrew automatically if not present
+  - To install manually: https://brew.sh
 - For Linux PDF support, system libraries such as `libcairo2-dev` and `pkg-config` are recommended.
 - Optional: `Pillow` for splitting very tall Mermaid diagrams into multiple images.
 - Network access requirement for Mermaid:
