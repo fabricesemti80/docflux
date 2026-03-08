@@ -47,8 +47,10 @@ uv python install 3.12
 
 echo "Installing docflux with PDF support..."
 if command -v brew &> /dev/null; then
-    PKG_CONFIG="$(brew --prefix)/bin/pkg-config" \
-    PKG_CONFIG_PATH="$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" \
+    BREW_PREFIX="$(brew --prefix)"
+    PATH="$BREW_PREFIX/bin:$PATH" \
+    PKG_CONFIG="$BREW_PREFIX/bin/pkg-config" \
+    PKG_CONFIG_PATH="$BREW_PREFIX/opt/cairo/lib/pkgconfig:$BREW_PREFIX/lib/pkgconfig" \
     uv tool install --native-tls --python 3.12 .
 else
     uv tool install --native-tls --python 3.12 .
