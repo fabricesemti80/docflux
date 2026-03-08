@@ -25,6 +25,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install cairo pkg-config
+          echo "PKG_CONFIG=$(brew --prefix)/bin/pkg-config" >> "$GITHUB_ENV"
           echo "PKG_CONFIG_PATH=$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" >> "$GITHUB_ENV"
       
       - uses: astral-sh/setup-uv@v4
