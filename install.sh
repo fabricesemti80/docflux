@@ -26,7 +26,12 @@ fi
 echo "Installing system dependencies for PDF..."
 if command -v apt-get &> /dev/null; then
     sudo apt-get install -y libcairo2-dev pkg-config
-elif command -v brew &> /dev/null; then
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS - install Homebrew if needed, then dependencies
+    if ! command -v brew &> /dev/null; then
+        echo "Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
     echo "Installing cairo and pkg-config via Homebrew..."
     brew install cairo pkg-config
 fi
