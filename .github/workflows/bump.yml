@@ -28,24 +28,50 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           CURRENT=${CURRENT#v}
-          
+
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          
+
           case "${{ github.event.inputs.version_type }}" in
             major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
             minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
             patch) PATCH=$((PATCH + 1)) ;;
           esac
-          
+
           NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
+          NEW_VERSION_NO_V="$MAJOR.$MINOR.$PATCH"
+
+          echo "Current version: $CURRENT"
+          echo "New version: $NEW_VERSION"
+          echo "version_type: ${{ github.event.inputs.version_type }}"
+
+          # Update version in pyproject.toml
+          if grep -q "^version = " pyproject.toml; then
+            sed -i.bak "s/^version = .*/version = \"$NEW_VERSION_NO_V\"/" pyproject.toml
+            rm -f pyproject.toml.bak
+          else
+            echo "ERROR: Could not find version line in pyproject.toml"
+            exit 1
+          fi
+
+          # Update version in convert.py
+          if grep -q "^__version__ = " convert.py; then
+            sed -i.bak "s/^__version__ = .*/\__version__ = \"$NEW_VERSION_NO_V\"/" convert.py
+            rm -f convert.py.bak
+          else
+            echo "ERROR: Could not find __version__ line in convert.py"
+            exit 1
+          fi
+
           echo "previous_version=v$CURRENT" >> $GITHUB_OUTPUT
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          
-          sed -i "s/^version = \".*\"/version = \"$MAJOR.$MINOR.$PATCH\"/" pyproject.toml
-          sed -i "s/^__version__ = \".*\"/__version__ = \"$MAJOR.$MINOR.$PATCH\"/" convert.py
+
+          if git diff --quiet; then
+            echo "ERROR: No changes detected after version bump"
+            exit 1
+          fi
 
           git add pyproject.toml convert.py
           git commit -m "Bump version to $NEW_VERSION"
