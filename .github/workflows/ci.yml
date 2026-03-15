@@ -28,7 +28,7 @@ jobs:
           echo "PKG_CONFIG=$(brew --prefix)/bin/pkg-config" >> "$GITHUB_ENV"
           echo "PKG_CONFIG_PATH=$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig" >> "$GITHUB_ENV"
       
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       
@@ -44,7 +44,7 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get install -y libcairo2-dev pkg-config
       
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       
