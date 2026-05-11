@@ -126,6 +126,59 @@ def _is_windows_drive_path(path_value):
     return bool(re.match(r"^[a-zA-Z]:[\\/]", path_value or ""))
 
 
+def _resolve_image_paths(content, base_dir):
+    """
+    Rewrite relative image paths in markdown image syntax and raw HTML <img>
+    tags to absolute paths resolved from *base_dir* (the input file's directory).
+
+    This ensures that references like ``../assets/logo.png`` work correctly
+    regardless of the current working directory or the location of any
+    intermediate temp files used by the conversion engines.
+
+    Absolute paths, Windows drive paths, and URLs are left untouched.
+    Relative paths that cannot be found on disk are also left as-is so that
+    any existing error handling in the engine can report the problem.
+    """
+    abs_base = os.path.abspath(base_dir)
+
+    def _resolve(raw_path):
+        raw_path = raw_path.strip()
+        if not raw_path:
+            return raw_path
+        if re.match(r"^(https?|file)://", raw_path):
+            return raw_path
+        if os.path.isabs(raw_path) or _is_windows_drive_path(raw_path):
+            return raw_path
+        candidate = os.path.normpath(os.path.join(abs_base, raw_path))
+        if os.path.exists(candidate):
+            return candidate.replace("\\", "/")
+        return raw_path
+
+    # Markdown images: ![alt](path)  or  ![alt](path "title")
+    def _rewrite_md(m):
+        alt, inner = m.group(1), m.group(2)
+        # The inner group may contain a title: path "title" — preserve it.
+        parts = inner.split(None, 1)
+        resolved = _resolve(parts[0])
+        rest = (" " + parts[1]) if len(parts) > 1 else ""
+        return f"![{alt}]({resolved}{rest})"
+
+    content = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", _rewrite_md, content)
+
+    # Raw HTML <img src="..."> or <img src='...'>
+    def _rewrite_html(m):
+        prefix, path, suffix = m.group(1), m.group(2), m.group(3)
+        return f"{prefix}{_resolve(path)}{suffix}"
+
+    content = re.sub(
+        r'(<img\b[^>]*?\bsrc=["\'])([^"\']+)(["\'])',
+        _rewrite_html,
+        content,
+        flags=re.IGNORECASE,
+    )
+    return content
+
+
 def _make_xhtml2pdf_link_callback(search_paths):
     """
     Resolves local image/file references for xhtml2pdf.
@@ -520,6 +573,10 @@ def convert_md_to_output(input_file, output_file, output_format):
         content = strip_yaml_front_matter(content)
         content = re.sub(r"^---\s*$", "***", content, flags=re.MULTILINE)
         content = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", r"![](\2)", content)
+        # Resolve relative image paths to absolute before handing off to any
+        # conversion engine.  convert_text() has no implicit base directory so
+        # ../assets/logo.png would otherwise be resolved from cwd, not input_dir.
+        content = _resolve_image_paths(content, input_dir)
 
         # Use a local temp directory for Mermaid images and Pandoc output
         # to avoid issues with UNC paths, spaces, and file locks.
