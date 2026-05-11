@@ -1,7 +1,15 @@
 __version__ = "1.0.1"
 import argparse  # Helps us read commands from the terminal
 import sys  # Helps us interact with the computer system (like exiting the program)
+
+# Ensure stdout/stderr use UTF-8 on Windows where the default codepage (e.g. cp1252)
+# cannot encode characters like ✓. reconfigure() is available from Python 3.7+.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 import os  # Helps us work with files and folders
+import pathlib
 import re  # Helps us match text patterns
 import subprocess
 import base64  # Helps us encode data for URLs
@@ -159,13 +167,9 @@ def _make_xhtml2pdf_link_callback(search_paths):
             if not base_dir:
                 continue
             candidate = os.path.abspath(os.path.join(base_dir, raw))
-            # Prevent path traversal: resolved path must stay within the base directory.
-            try:
-                common = os.path.commonpath([candidate, base_dir])
-            except ValueError:
-                continue  # Different drives on Windows — skip.
-            if common != base_dir:
-                continue
+            # Only check that the file exists — traversal above the base dir is
+            # intentionally allowed so that paths like ../assets/logo.png resolve
+            # correctly when the assets folder sits next to the input file.
             if os.path.exists(candidate):
                 return candidate
 
@@ -238,7 +242,12 @@ def _convert_pdf_with_wkhtmltopdf(content, output_file, resource_path_arg):
         "th { background-color: #e9ecef; font-weight: bold; }"
         "</style>"
     )
-    html = f"<html><head><meta charset='utf-8'>{css}</head><body>{html}</body></html>"
+    # Set <base href> to the input file's directory so that relative image paths
+    # (e.g. ../assets/logo.png) are resolved correctly even though the HTML is
+    # written to a temporary file in a different location.
+    input_dir = resource_path_arg.split(os.pathsep)[0]
+    base_uri = pathlib.Path(input_dir).as_uri() + "/"
+    html = f"<html><head><meta charset='utf-8'><base href='{base_uri}'>{css}</head><body>{html}</body></html>"
     with tempfile.NamedTemporaryFile(
         "w", suffix=".html", delete=False, encoding="utf-8"
     ) as tmp_html:
