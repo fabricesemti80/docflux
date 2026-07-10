@@ -1,5 +1,8 @@
 CHANGELOG
 
+2026-07-10
+- Added local-first Mermaid rendering via the Mermaid CLI (mmdc): diagrams render offline with no network access on Windows, macOS, and Linux when mmdc is installed, falling back to mermaid.ink otherwise.
+
 2026-03-06
 - Version 1.0.0 release - ready for production use!
 

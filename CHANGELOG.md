@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-07-10
+
+### Added
+- Local-first Mermaid rendering via the Mermaid CLI (`mmdc`). When `mmdc` is on
+  `PATH`, diagrams render offline with no network access, on Windows, macOS, and
+  Linux alike. Removes the hard dependency on `https://mermaid.ink` (and sidesteps
+  corporate TLS-interception failures) where the CLI is installed.
+- `DFX_MMDC_PATH` environment variable to point at a non-standard `mmdc` location.
+
+### Changed
+- `mermaid.ink` is now an automatic fallback, used only when `mmdc` is not found
+  or fails for a given diagram. Behaviour on machines without the CLI is unchanged.
+- Local rendering has no per-diagram size limit; the 4 KB cap now applies only to
+  the `mermaid.ink` fallback (a URL-length constraint of that service).
+
 ## [0.2.3] - 2026-03-05
 
 ### Added

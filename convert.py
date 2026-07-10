@@ -1,7 +1,15 @@
 __version__ = "1.0.1"
 import argparse  # Helps us read commands from the terminal
 import sys  # Helps us interact with the computer system (like exiting the program)
+
+# Ensure stdout/stderr use UTF-8 on Windows where the default codepage (e.g. cp1252)
+# cannot encode characters like ✓. reconfigure() is available from Python 3.7+.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 import os  # Helps us work with files and folders
+import pathlib
 import re  # Helps us match text patterns
 import subprocess
 import base64  # Helps us encode data for URLs
@@ -118,6 +126,59 @@ def _is_windows_drive_path(path_value):
     return bool(re.match(r"^[a-zA-Z]:[\\/]", path_value or ""))
 
 
+def _resolve_image_paths(content, base_dir):
+    """
+    Rewrite relative image paths in markdown image syntax and raw HTML <img>
+    tags to absolute paths resolved from *base_dir* (the input file's directory).
+
+    This ensures that references like ``../assets/logo.png`` work correctly
+    regardless of the current working directory or the location of any
+    intermediate temp files used by the conversion engines.
+
+    Absolute paths, Windows drive paths, and URLs are left untouched.
+    Relative paths that cannot be found on disk are also left as-is so that
+    any existing error handling in the engine can report the problem.
+    """
+    abs_base = os.path.abspath(base_dir)
+
+    def _resolve(raw_path):
+        raw_path = raw_path.strip()
+        if not raw_path:
+            return raw_path
+        if re.match(r"^(https?|file)://", raw_path):
+            return raw_path
+        if os.path.isabs(raw_path) or _is_windows_drive_path(raw_path):
+            return raw_path
+        candidate = os.path.normpath(os.path.join(abs_base, raw_path))
+        if os.path.exists(candidate):
+            return candidate.replace("\\", "/")
+        return raw_path
+
+    # Markdown images: ![alt](path)  or  ![alt](path "title")
+    def _rewrite_md(m):
+        alt, inner = m.group(1), m.group(2)
+        # The inner group may contain a title: path "title" — preserve it.
+        parts = inner.split(None, 1)
+        resolved = _resolve(parts[0])
+        rest = (" " + parts[1]) if len(parts) > 1 else ""
+        return f"![{alt}]({resolved}{rest})"
+
+    content = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", _rewrite_md, content)
+
+    # Raw HTML <img src="..."> or <img src='...'>
+    def _rewrite_html(m):
+        prefix, path, suffix = m.group(1), m.group(2), m.group(3)
+        return f"{prefix}{_resolve(path)}{suffix}"
+
+    content = re.sub(
+        r'(<img\b[^>]*?\bsrc=["\'])([^"\']+)(["\'])',
+        _rewrite_html,
+        content,
+        flags=re.IGNORECASE,
+    )
+    return content
+
+
 def _make_xhtml2pdf_link_callback(search_paths):
     """
     Resolves local image/file references for xhtml2pdf.
@@ -159,13 +220,9 @@ def _make_xhtml2pdf_link_callback(search_paths):
             if not base_dir:
                 continue
             candidate = os.path.abspath(os.path.join(base_dir, raw))
-            # Prevent path traversal: resolved path must stay within the base directory.
-            try:
-                common = os.path.commonpath([candidate, base_dir])
-            except ValueError:
-                continue  # Different drives on Windows — skip.
-            if common != base_dir:
-                continue
+            # Only check that the file exists — traversal above the base dir is
+            # intentionally allowed so that paths like ../assets/logo.png resolve
+            # correctly when the assets folder sits next to the input file.
             if os.path.exists(candidate):
                 return candidate
 
@@ -238,7 +295,12 @@ def _convert_pdf_with_wkhtmltopdf(content, output_file, resource_path_arg):
         "th { background-color: #e9ecef; font-weight: bold; }"
         "</style>"
     )
-    html = f"<html><head><meta charset='utf-8'>{css}</head><body>{html}</body></html>"
+    # Set <base href> to the input file's directory so that relative image paths
+    # (e.g. ../assets/logo.png) are resolved correctly even though the HTML is
+    # written to a temporary file in a different location.
+    input_dir = resource_path_arg.split(os.pathsep)[0]
+    base_uri = pathlib.Path(input_dir).as_uri() + "/"
+    html = f"<html><head><meta charset='utf-8'><base href='{base_uri}'>{css}</head><body>{html}</body></html>"
     with tempfile.NamedTemporaryFile(
         "w", suffix=".html", delete=False, encoding="utf-8"
     ) as tmp_html:
@@ -328,11 +390,65 @@ def strip_yaml_front_matter(text):
     return result
 
 
+def _find_mermaid_cli():
+    """
+    Locate the local Mermaid CLI (`mmdc`) if it is installed, returning its
+    resolved path or None.
+
+    Cross-platform by design: `shutil.which` honours `PATHEXT` on Windows, so a
+    single lookup finds `mmdc.cmd` there and the bare `mmdc` binary on macOS and
+    Linux. Returning the absolute path (rather than the bare name) is what lets
+    the subprocess call run a Windows `.cmd` shim without `shell=True`.
+    """
+    override = os.getenv("DFX_MMDC_PATH")
+    if override:
+        return override if os.path.exists(override) else None
+    return shutil.which("mmdc")
+
+
+def _render_mermaid_local(diagram_code, image_path, mmdc_path, diagrams_dir, diagram_num):
+    """
+    Render a single Mermaid diagram to a PNG using the local `mmdc` CLI.
+
+    Works identically on Windows, macOS, and Linux. Raises on any failure so the
+    caller can fall back to the hosted renderer. A puppeteer config carrying
+    `--no-sandbox` is written alongside the diagram: it is required for the
+    bundled Chromium to launch under headless/root Linux (e.g. CI) and is
+    harmless on macOS and Windows.
+    """
+    mmd_path = os.path.join(diagrams_dir, f"mermaid_{diagram_num}.mmd")
+    with open(mmd_path, "w", encoding="utf-8") as f:
+        f.write(diagram_code)
+
+    puppeteer_cfg = os.path.join(diagrams_dir, "puppeteer-config.json")
+    if not os.path.exists(puppeteer_cfg):
+        with open(puppeteer_cfg, "w", encoding="utf-8") as f:
+            f.write('{"args": ["--no-sandbox"]}')
+
+    cmd = [
+        mmdc_path,
+        "-i", mmd_path,
+        "-o", image_path,
+        "-s", "3",          # scale factor — crisper text for PDF/DOCX output
+        "-b", "white",      # solid background so diagrams read on printed pages
+        "-p", puppeteer_cfg,
+    ]
+    # No shell=True: pass the absolute path (incl. .cmd on Windows) directly so
+    # invocation and argument quoting behave identically across platforms.
+    subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=120)
+
+
 def render_mermaid_blocks(content, temp_dir):
     """
-    Finds all ```mermaid code blocks in the Markdown content,
-    renders each one to a PNG image using the Mermaid Ink service,
-    and replaces the code block with a Markdown image reference.
+    Finds all ```mermaid code blocks in the Markdown content, renders each one
+    to a PNG image, and replaces the code block with a Markdown image reference.
+
+    Rendering is local-first: if the Mermaid CLI (`mmdc`) is on PATH, diagrams
+    are rendered offline with no network access. If it is absent (or fails for a
+    given diagram), rendering falls back to the hosted `https://mermaid.ink`
+    service. This keeps the tool working on any machine — with or without the
+    CLI installed — while removing the network dependency where the CLI exists.
+
     Images are saved to a local temp directory to avoid UNC path issues with Pandoc.
     """
     # Pattern to match ```mermaid ... ``` blocks
@@ -345,6 +461,15 @@ def render_mermaid_blocks(content, temp_dir):
     # Use a local temp directory so Pandoc can always resolve the image paths
     diagrams_dir = os.path.join(temp_dir, "mermaid_diagrams")
     os.makedirs(diagrams_dir, exist_ok=True)
+
+    mmdc_path = _find_mermaid_cli()
+    if mmdc_path:
+        log_info(f"Using local Mermaid CLI (offline rendering): {mmdc_path}")
+    else:
+        log_info(
+            "Local Mermaid CLI (mmdc) not found; using mermaid.ink fallback "
+            "(requires network access)."
+        )
 
     log_step(f"Found {len(matches)} Mermaid diagram(s), rendering to images...")
 
@@ -381,47 +506,64 @@ def render_mermaid_blocks(content, temp_dir):
         diagram_num = len(matches) - i + 1
         image_path = os.path.join(diagrams_dir, f"mermaid_{diagram_num}.png")
 
-        if len(diagram_code.encode("utf-8")) > _MAX_MERMAID_DIAGRAM_BYTES:
-            log_warn(
-                f"Diagram {diagram_num} exceeds {_MAX_MERMAID_DIAGRAM_BYTES} bytes; "
-                "skipping mermaid.ink render (block kept as-is)."
-            )
-            continue
+        rendered = False
 
-        try:
-            # Encode the Mermaid code as base64 for the Mermaid Ink URL
-            encoded = base64.urlsafe_b64encode(diagram_code.encode("utf-8")).decode(
-                "ascii"
-            )
-            url = f"https://mermaid.ink/img/{encoded}"
+        # 1) Preferred: render locally with the Mermaid CLI (no network).
+        if mmdc_path:
+            try:
+                _render_mermaid_local(
+                    diagram_code, image_path, mmdc_path, diagrams_dir, diagram_num
+                )
+                rendered = True
+            except Exception as e:
+                detail = (getattr(e, "stderr", "") or str(e)).strip()
+                log_warn(
+                    f"Local render of diagram {diagram_num} failed: {detail[:300]}"
+                )
+                log_warn("Falling back to mermaid.ink for this diagram.")
 
-            response = requests.get(url, timeout=30, verify=not _INSECURE_TLS)
-            response.raise_for_status()
+        # 2) Fallback: hosted mermaid.ink service (requires network access).
+        if not rendered:
+            if len(diagram_code.encode("utf-8")) > _MAX_MERMAID_DIAGRAM_BYTES:
+                log_warn(
+                    f"Diagram {diagram_num} exceeds {_MAX_MERMAID_DIAGRAM_BYTES} bytes; "
+                    "too large for the mermaid.ink URL (block kept as-is). "
+                    "Install the Mermaid CLI (mmdc) to render diagrams of any size."
+                )
+                continue
+            try:
+                # Encode the Mermaid code as base64 for the Mermaid Ink URL
+                encoded = base64.urlsafe_b64encode(
+                    diagram_code.encode("utf-8")
+                ).decode("ascii")
+                url = f"https://mermaid.ink/img/{encoded}"
 
-            with open(image_path, "wb") as f:
-                f.write(response.content)
+                response = requests.get(url, timeout=30, verify=not _INSECURE_TLS)
+                response.raise_for_status()
 
-            chunk_paths = split_tall_image_if_needed(
-                image_path, f"mermaid_{diagram_num}"
-            )
-            refs = []
-            for idx, chunk_path in enumerate(chunk_paths, 1):
-                pandoc_path = chunk_path.replace("\\", "/")
-                if len(chunk_paths) == 1:
-                    refs.append(
-                        f"![Diagram {diagram_num}]({pandoc_path}){{ width=95% }}"
-                    )
-                else:
-                    refs.append(
-                        f"![Diagram {diagram_num} ({idx}/{len(chunk_paths)})]({pandoc_path}){{ width=95% }}"
-                    )
-            replacement = "\n\n".join(refs)
-            content = content[: match.start()] + replacement + content[match.end() :]
-            log_info(f"Rendered diagram {diagram_num} -> {image_path}")
+                with open(image_path, "wb") as f:
+                    f.write(response.content)
+                rendered = True
+            except Exception as e:
+                log_warn(f"Failed to render diagram {diagram_num}: {e}")
+                log_warn("The Mermaid code block will be kept as-is.")
+                continue
 
-        except Exception as e:
-            log_warn(f"Failed to render diagram {diagram_num}: {e}")
-            log_warn("The Mermaid code block will be kept as-is.")
+        # Shared post-processing: split tall diagrams and rewrite the block as
+        # one or more Markdown image references, regardless of render source.
+        chunk_paths = split_tall_image_if_needed(image_path, f"mermaid_{diagram_num}")
+        refs = []
+        for idx, chunk_path in enumerate(chunk_paths, 1):
+            pandoc_path = chunk_path.replace("\\", "/")
+            if len(chunk_paths) == 1:
+                refs.append(f"![Diagram {diagram_num}]({pandoc_path}){{ width=95% }}")
+            else:
+                refs.append(
+                    f"![Diagram {diagram_num} ({idx}/{len(chunk_paths)})]({pandoc_path}){{ width=95% }}"
+                )
+        replacement = "\n\n".join(refs)
+        content = content[: match.start()] + replacement + content[match.end() :]
+        log_info(f"Rendered diagram {diagram_num} -> {image_path}")
 
     return content
 
@@ -511,6 +653,10 @@ def convert_md_to_output(input_file, output_file, output_format):
         content = strip_yaml_front_matter(content)
         content = re.sub(r"^---\s*$", "***", content, flags=re.MULTILINE)
         content = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", r"![](\2)", content)
+        # Resolve relative image paths to absolute before handing off to any
+        # conversion engine.  convert_text() has no implicit base directory so
+        # ../assets/logo.png would otherwise be resolved from cwd, not input_dir.
+        content = _resolve_image_paths(content, input_dir)
 
         # Use a local temp directory for Mermaid images and Pandoc output
         # to avoid issues with UNC paths, spaces, and file locks.
