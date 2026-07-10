@@ -15,7 +15,7 @@ Docflux (`dfx`) is a CLI for converting technical documentation between Markdown
 - Markdown -> DOCX
 - Markdown -> PDF
 - DOCX -> Markdown
-- Mermaid code blocks in Markdown are rendered to PNG images during Markdown output conversion.
+- Mermaid code blocks in Markdown are rendered to PNG images during Markdown output conversion. Rendering is **local-first**: if the Mermaid CLI (`mmdc`) is installed it renders offline with no network access; otherwise it falls back to the hosted `https://mermaid.ink` service.
 
 ## Prerequisites 🧰
 
@@ -28,10 +28,11 @@ Docflux (`dfx`) is a CLI for converting technical documentation between Markdown
   - To install manually: https://brew.sh
 - For Linux PDF support, system libraries such as `libcairo2-dev` and `pkg-config` are recommended.
 - Optional: `Pillow` for splitting very tall Mermaid diagrams into multiple images.
-- Network access requirement for Mermaid:
-  - `dfx` renders Mermaid via `https://mermaid.ink`.
-  - Outbound HTTPS access to `mermaid.ink` is required for Mermaid diagram rendering.
-  - If unreachable, conversion continues and Mermaid code blocks are kept as-is.
+- Mermaid rendering (choose either):
+  - **Offline (recommended): the Mermaid CLI.** Install [`@mermaid-js/mermaid-cli`](https://github.com/mermaid-js/mermaid-cli) so `mmdc` is on `PATH` (`npm install -g @mermaid-js/mermaid-cli`; requires Node.js). Works on Windows, macOS, and Linux, needs no network, and renders diagrams of any size.
+    - `mmdc` renders through a Chromium browser (via Puppeteer). Provide one either by letting Puppeteer download its bundled Chromium (`npx puppeteer browsers install chrome-headless-shell`), or — recommended behind a restrictive proxy, since it downloads nothing — by pointing it at a browser already installed: set `PUPPETEER_EXECUTABLE_PATH` to an existing Chrome/Edge binary (e.g. on Windows `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`).
+    - If `mmdc` is installed to a non-standard location, set `DFX_MMDC_PATH` to its full path.
+  - **Hosted fallback: `https://mermaid.ink`.** Used automatically when `mmdc` is not found. Requires outbound HTTPS to `mermaid.ink`. If unreachable, conversion continues and Mermaid code blocks are kept as-is.
 
 ## Quick Install 🚀
 

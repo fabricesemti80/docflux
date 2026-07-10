@@ -81,5 +81,5 @@ uv run --no-sync dfx -i doc.md -o out.pdf --pdf
 ## Notes
 
 - `dfx` attempts to download a bundled Pandoc on first use if Pandoc is not in `PATH`.
-- Mermaid rendering requires outbound HTTPS access to `https://mermaid.ink`.
+- Mermaid rendering is local-first: install the Mermaid CLI (`npm install -g @mermaid-js/mermaid-cli`) so `mmdc` is on `PATH` to render offline. Without it, `dfx` falls back to outbound HTTPS access to `https://mermaid.ink`. Override the CLI location with `DFX_MMDC_PATH`.
 - CI currently runs on Ubuntu and Windows, and linting is performed with Ruff.
