@@ -126,6 +126,18 @@ jobs:
           git add demo.gif
           git diff --cached --quiet && echo "No changes" && exit 0
           git commit -m "chore: update demo GIF [skip ci]"
-          git push origin HEAD:main
+          # main may have advanced since checkout (e.g. a concurrent merge),
+          # which makes a plain push non-fast-forward. Rebase onto the latest
+          # remote tip and retry a few times before giving up.
+          for attempt in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              echo "Pushed demo GIF on attempt $attempt"
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; refetching and retrying..."
+            sleep 5
+          done
+          echo "::error::Failed to push demo GIF after 3 attempts" >&2
+          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
