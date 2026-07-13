@@ -8,7 +8,12 @@
 #   - chromium        : headless browser mmdc renders through
 #   - git             : GitLab CI clones the repo *inside* this image
 #   - fonts           : Liberation/DejaVu for text, Noto emoji for 📀 ✅ etc.
-FROM python:3.12-slim
+#
+# Pinned to Debian 12 (bookworm): wkhtmltopdf was removed from Debian 13
+# (trixie), which the unpinned `slim` tag now tracks. bookworm still ships
+# every package below. (Longer term, switch the PDF engine to WeasyPrint,
+# which dfx already prefers, and this pin can be dropped.)
+FROM python:3.12-slim-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       pandoc \
