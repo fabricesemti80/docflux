@@ -128,6 +128,37 @@ curl -sSL https://raw.githubusercontent.com/fabricesemti80/docflux/main/uninstal
 irm https://raw.githubusercontent.com/fabricesemti80/docflux/main/uninstall.ps1 | iex
 ```
 
+## Docker / CI 🐳
+
+A prebuilt image bundling the full toolchain (pandoc, wkhtmltopdf, Node + Mermaid CLI, Chromium, fonts) is published to GHCR on every release:
+
+```
+ghcr.io/fabricesemti80/docflux:latest        # or a pinned version, e.g. :1.1.0
+```
+
+Mermaid renders offline inside the image (Chromium is baked in and `PUPPETEER_EXECUTABLE_PATH` is preset), so no network access or browser setup is needed at run time.
+
+Run it directly:
+
+```bash
+docker run --rm -v "$PWD:/work" -w /work ghcr.io/fabricesemti80/docflux:latest -i doc.md --pdf
+```
+
+In **GitLab CI**, override the entrypoint so the runner can start its own shell, then call `dfx`:
+
+```yaml
+convert:
+  image:
+    name: ghcr.io/fabricesemti80/docflux:latest
+    entrypoint: [""]
+  script:
+    - dfx -i doc.md -o doc.pdf --pdf
+  artifacts:
+    paths: ["**/*.pdf"]
+```
+
+> The image is built on GitHub (clean egress). A runner behind a restrictive proxy must be able to pull from `ghcr.io` and trust the proxy's CA at the container-runtime level; otherwise mirror the image into your own registry and point `image:` at that.
+
 ## Development Notes 🧪
 
 Development workflows (`make`, `uv sync`, `uv run`, local testing) are documented in `DEVNOTES.md`.

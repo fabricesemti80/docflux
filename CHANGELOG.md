@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-07-10
+
+### Added
+- `Dockerfile` and a GHCR-published container image
+  (`ghcr.io/fabricesemti80/docflux`) bundling pandoc, wkhtmltopdf, Node + the
+  Mermaid CLI, Chromium, and fonts — so md -> pdf/docx conversion (tables +
+  offline Mermaid, emoji included) runs in CI with no host toolchain setup.
+- `Publish container image` workflow: builds on GitHub's hosted runners and
+  pushes the image on every `v*` tag (plus manual dispatch).
+
 ## [1.1.0] - 2026-07-10
 
 ### Added

@@ -1,0 +1,14 @@
+# Keep the build context small; the image only needs the package sources.
+.git
+.github
+build
+*.egg-info
+.venv
+__pycache__
+*.pyc
+demo
+demo.gif
+*.gif
+test.docx
+test.md
+uv.lock
