@@ -13,7 +13,7 @@
 # (trixie), which the unpinned `slim` tag now tracks. bookworm still ships
 # every package below. (Longer term, switch the PDF engine to WeasyPrint,
 # which dfx already prefers, and this pin can be dropped.)
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       pandoc \
