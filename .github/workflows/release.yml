@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || !inputs.skip_tests
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       
       - name: Install system dependencies
         run: sudo apt-get install -y libcairo2-dev pkg-config
@@ -35,7 +35,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       
       - name: Install system dependencies
         run: sudo apt-get install -y libcairo2-dev pkg-config
@@ -55,7 +55,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -90,7 +90,7 @@ jobs:
     # Regenerating the README GIF is cosmetic — never let it fail the release.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
