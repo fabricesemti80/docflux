@@ -20,7 +20,7 @@ jobs:
       contents: write
       actions: write  # required for `gh workflow run` to dispatch release.yml
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
